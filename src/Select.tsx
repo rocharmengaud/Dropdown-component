@@ -1,40 +1,79 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './select.module.css';
 
-type SelectOption = {
+export type SelectOption = {
   label: string;
-  value: any;
+  value: string | number;
 };
 
-type SelectProps = {
-  options: SelectOption[];
-  // optional field with ?
+type SingleSelectProps = {
+  multiple?: false;
   value?: SelectOption;
   onChange: (value: SelectOption | undefined) => void;
 };
 
-export const Select = ({ value, onChange, options }: SelectProps) => {
+type MultipleSelectProps = {
+  multiple: true;
+  value: SelectOption[];
+  onChange: (value: SelectOption[]) => void;
+};
+
+type SelectProps = {
+  options: SelectOption[];
+} & (SingleSelectProps | MultipleSelectProps);
+
+export const Select = ({ value, onChange, options, multiple }: SelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   function clearOptions() {
-    onChange(undefined);
+    multiple ? onChange([]) : onChange(undefined);
   }
 
   function selectOption(option: SelectOption) {
-    onChange(option);
+    if (multiple) {
+      if (value.includes(option)) {
+        onChange(value.filter((o) => o !== option));
+      } else {
+        onChange([...value, option]);
+      }
+    } else {
+      if (option !== value) onChange(option);
+    }
   }
 
   function isOptionSelected(option: SelectOption) {
-    return option === value;
+    return multiple ? value.includes(option) : option === value;
   }
+
+  // If we click outside the dropdown we reset the highlight to the first option (index 0)
+  useEffect(() => {
+    if (isOpen) setHighlightedIndex(0);
+  }, [isOpen]);
 
   return (
     <>
       {/* CLASSNAMES HERE ARE CSS MODULES */}
       {/* onBlur means when we defocus by clicking off this div area */}
       <div tabIndex={0} className={styles.container} onClick={() => setIsOpen((previous) => !previous)} onBlur={() => setIsOpen(false)}>
-        <span className={styles.value}>{value?.label}</span>
+        <span className={styles.value}>
+          {multiple
+            ? value.map((v) => (
+                <button
+                  key={v.value}
+                  className={styles['option-badge']}
+                  onClick={(event) => {
+                    // so the parent (dropdown) doesn't open up
+                    event.stopPropagation();
+                    selectOption(v);
+                  }}
+                >
+                  {v.label}
+                  <span className={styles['remove-btn']}>&times;</span>
+                </button>
+              ))
+            : value?.label}
+        </span>
         {/* THIS IS A WAY FOR STYLES WITH A - TO WORK */}
         <button
           className={styles['clear-btn']}
@@ -52,7 +91,7 @@ export const Select = ({ value, onChange, options }: SelectProps) => {
         <ul className={`${styles.options} ${isOpen ? styles.show : ''}`}>
           {options.map((option, index) => (
             <li
-              key={option.label}
+              key={option.value}
               className={`${styles.option} ${isOptionSelected(option) ? styles.selected : ''} ${
                 index === highlightedIndex ? styles.highlighted : ''
               } `}

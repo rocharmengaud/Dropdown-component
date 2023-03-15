@@ -15,6 +15,7 @@ type SelectProps = {
 
 export const Select = ({ value, onChange, options }: SelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   function clearOptions() {
     onChange(undefined);
@@ -23,6 +24,11 @@ export const Select = ({ value, onChange, options }: SelectProps) => {
   function selectOption(option: SelectOption) {
     onChange(option);
   }
+
+  function isOptionSelected(option: SelectOption) {
+    return option === value;
+  }
+
   return (
     <>
       {/* CLASSNAMES HERE ARE CSS MODULES */}
@@ -44,15 +50,18 @@ export const Select = ({ value, onChange, options }: SelectProps) => {
         <div className={styles.caret}></div>
         {/* '' for empty styling */}
         <ul className={`${styles.options} ${isOpen ? styles.show : ''}`}>
-          {options.map((option) => (
+          {options.map((option, index) => (
             <li
               key={option.label}
-              className={`${styles.option} ${isOptionSelected(option) > styles.selected} : ''`}
+              className={`${styles.option} ${isOptionSelected(option) ? styles.selected : ''} ${
+                index === highlightedIndex ? styles.highlighted : ''
+              } `}
               onClick={(event) => {
                 event.stopPropagation();
                 selectOption(option);
                 setIsOpen(false);
               }}
+              onMouseEnter={() => setHighlightedIndex(index)}
             >
               {option.label}
             </li>

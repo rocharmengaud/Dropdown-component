@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styles from './select.module.css';
 
 export type SelectOption = {
@@ -26,6 +26,9 @@ export const Select = ({ value, onChange, options, multiple }: SelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
+  // FOR ACCESSIBILITY
+  const containerRef = useRef<HTMLDivElement>(null);
+
   function clearOptions() {
     multiple ? onChange([]) : onChange(undefined);
   }
@@ -51,11 +54,52 @@ export const Select = ({ value, onChange, options, multiple }: SelectProps) => {
     if (isOpen) setHighlightedIndex(0);
   }, [isOpen]);
 
+  // ACCESSIBILITY
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.target != containerRef.current) return;
+      switch (event.code) {
+        case 'Enter':
+        case 'Space':
+          setIsOpen((previous) => !previous);
+          if (isOpen) selectOption(options[highlightedIndex]);
+          break;
+        case 'ArrowUp':
+        case 'ArrowDown': {
+          if (!isOpen) {
+            setIsOpen(true);
+            break;
+          }
+
+          const newValue = highlightedIndex + (event.code === 'ArrowDown' ? 1 : -1);
+          if (newValue >= 0 && newValue < options.length) {
+            setHighlightedIndex(newValue);
+          }
+          break;
+        }
+        case 'Escape':
+          setIsOpen(false);
+          break;
+      }
+    };
+
+    containerRef.current?.addEventListener('keydown', handler);
+    return () => {
+      containerRef.current?.removeEventListener('keydown', handler);
+    };
+  }, [isOpen, highlightedIndex, options]);
+
   return (
     <>
       {/* CLASSNAMES HERE ARE CSS MODULES */}
       {/* onBlur means when we defocus by clicking off this div area */}
-      <div tabIndex={0} className={styles.container} onClick={() => setIsOpen((previous) => !previous)} onBlur={() => setIsOpen(false)}>
+      <div
+        ref={containerRef}
+        tabIndex={0}
+        className={styles.container}
+        onClick={() => setIsOpen((previous) => !previous)}
+        onBlur={() => setIsOpen(false)}
+      >
         <span className={styles.value}>
           {multiple
             ? value.map((v) => (
